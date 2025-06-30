@@ -9,8 +9,8 @@
 
 SupabaseRealtime realtime;
 
-void HandleChanges(String result) {
-
+void HandleChanges(String result)
+{
   Serial.println("=== REALTIME EVENT RECEIVED ===");
   Serial.println("Raw result: " + result);
   
@@ -72,34 +72,10 @@ void HandleChanges(String result) {
   Serial.println("=== END EVENT ===\n");
 }
 
-// Helper function to print device_settings fields
-void printDeviceSettings(JsonObject record) {
-  if (record.containsKey("id")) {
-    String id = record["id"];
-    Serial.println("    ID: " + id);
-  }
-  if (record.containsKey("device_id")) {
-    String deviceId = record["device_id"];
-    Serial.println("    Device ID: " + deviceId);
-  }
-  if (record.containsKey("desired")) {
-    String desired;
-    serializeJson(record["desired"], desired);
-    Serial.println("    Desired: " + desired);
-  }
-  if (record.containsKey("reported")) {
-    String reported;
-    serializeJson(record["reported"], reported);
-    Serial.println("    Reported: " + reported);
-  }
-  if (record.containsKey("last_updated")) {
-    String lastUpdated = record["last_updated"];
-    Serial.println("    Last Updated: " + lastUpdated);
-  }
-}
+// Remove the helper function since we're not using it anymore
 
-void setup() {
-
+void setup()
+{
   Serial.begin(115200); // Increased baud rate for better debugging
   Serial.println("Starting Supabase Realtime Example...");
   
@@ -123,17 +99,22 @@ void setup() {
     HandleChanges
   );
   
-  // Only use authentication if you have Row Level Security (RLS) enabled
-  // realtime.login_email("your-email@example.com", "your-password");
+  // Enable authentication for RLS-protected table
+  // Create a device-specific user in Supabase auth for each ESP32
+  int loginResult = realtime.login_email("device_7c2c6746eedc@yourapp.com", "your_device_password");
+  if (loginResult != 200) {
+    Serial.printf("Login failed with code: %d\n", loginResult);
+    // Handle login failure - maybe fall back to anonymous mode
+  } else {
+    Serial.println("Device authenticated successfully");
+  }
   
   // Add listeners for different events
-  // Listen for ALL events on device_settings table (INSERT, UPDATE, DELETE)
-  realtime.addChangesListener("device_settings", "*", "public", "");
+  // With authentication, you can filter to just this device's settings
+  realtime.addChangesListener("device_settings", "*", "public", "device_id=eq.7c2c6746eedc");
   
-  // Or listen for specific events only:
-  // realtime.addChangesListener("device_settings", "INSERT", "public", "");
-  // realtime.addChangesListener("device_settings", "UPDATE", "public", "");
-  // realtime.addChangesListener("device_settings", "DELETE", "public", "");
+  // Or listen to all devices if your RLS policies allow it
+  // realtime.addChangesListener("device_settings", "*", "public", "");
   
   // You can add filters too, for example:
   // realtime.addChangesListener("device_settings", "*", "public", "device_id=eq.7c2c6746eedc");
@@ -141,10 +122,11 @@ void setup() {
   // Start listening
   realtime.listen();
   
-  Serial.println("Supabase Realtime initialized. Waiting for events...");
+  Serial.println("Supabase connected. Listening for device updates...");
 }
 
-void loop() {
+void loop()
+{
   // Main realtime loop - this must be called continuously
   realtime.loop();
   
